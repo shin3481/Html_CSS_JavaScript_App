@@ -158,6 +158,8 @@
     
     function addBook() {
         var title = document.getElementById('title').value;
+        console.log(typeof document.getElementById('title'));
+        console.log(title);
         var author = document.getElementById('author').value;
         var year = parseInt(document.getElementById('year').value);
         var isbn = document.getElementById('isbn').value;

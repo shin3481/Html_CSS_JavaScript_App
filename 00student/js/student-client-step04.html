@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>학생 관리 시스템</title>
-    <link rel="stylesheet" type="text/css" href="../css/form.css" />
+    <link rel="stylesheet" type="text/css" href="./css/form.css" />
 </head>
 
 <body>
@@ -78,6 +78,15 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <script type="text/javascript">
+      //전역변수
+      const API_BASE_URL = "http://localhost:8080";
+
+      //DOM 엘리먼트 가져오기
+      const studentForm = document.getElementById("studentForm");
+      const studentTableBody = document.getElementById("studentTableBody");
+    </script>
 </body>
 
 </html>
