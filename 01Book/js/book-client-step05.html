@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>도서 관리 시스템</title>
+  <link rel="stylesheet" type="text/css" href="../css/form.css" />
+</head>
+
+<body>
+  <h1>도서 관리 시스템</h1>
+
+  <div class="form-container">
+    <h2>도서 등록</h2>
+    <form id="bookForm">
+      <label for="title">제목:</label>
+      <input type="text" name="title" id="title" required>
+
+      <label for="author">저자:</label>
+      <input type="text" name="author" id="author" required>
+
+      <label for="isbn">ISBN:</label>
+      <input type="text" name="isbn" id="isbn" required>
+
+      <label for="price">가격:</label>
+      <input type="number" name="price" id="price" placeholder="0000*" pattern="[0-9]{4,5}" required>
+
+      <label for="publishDate">출판일:</label>
+      <input type="date" name="publishDate" id="publishDate">
+
+      <label for="description">description:</label>
+      <input type="text" name="description" id="description">
+
+      <label for="language">language:</label>
+      <input type="text" name="language" id="language">
+
+      <label for="pageCount">pageCount:</label>
+      <input type="number" name="pageCount" id="pageCount" placeholder="0*" pattern="[0-9]{3,4}" required>
+
+      <label for="publisher">publisher:</label>
+      <input type="text" name="publisher" id="publisher">
+
+      <label for="coverImageUrl">coverImageUrl:</label>
+      <input type="text" name="coverImageUrl" id="coverImageUrl">
+
+      <label for="edition">edition:</label>
+      <input type="text" name="edition" id="edition">
+
+      <button type="submit">도서 등록</button>
+    </form>
+  </div>
+
+  <div class="table-container">
+    <h2>도서 리스트</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>제목</th>
+          <th>저자</th>
+          <th>ISBN</th>
+          <th>가격</th>
+          <th>출판일</th>
+          <th>description</th>
+          <th>language</th>
+          <th>pageCount</th>
+          <th>publisher</th>
+          <th>coverImageUrl</th>
+          <th>edition</th>
+          <th>액션</th>
+        </tr>
+      </thead>
+      <tbody id="bookTableBody"></tbody>
+    </table>
+  </div>
+
+  <script src="../js/form.js">
+  </script>
+</body>
+
+</html>
