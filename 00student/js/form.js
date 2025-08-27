@@ -25,10 +25,16 @@ studentForm.addEventListener("submit", function (event) {
     const studentData = {
         name: stuFormData.get("name").trim(),
         studentNumber: stuFormData.get("studentNumber").trim(),
-        address: stuFormData.get("address").trim(),
-        phoneNumber: stuFormData.get("phoneNumber").trim(),
-        email: stuFormData.get("email").trim(),
-        dateOfBirth: stuFormData.get("dateOfBirth"),
+        //detailRequest
+        detailRequest: {
+
+            address: stuFormData.get("address").trim(),
+            phoneNumber: stuFormData.get("phoneNumber").trim(),
+            email: stuFormData.get("email").trim(),
+            dateOfBirth: stuFormData.get("dateOfBirth") || null,
+
+        }
+
     }
 
     //유효성 체크하는 함수 호출하기
@@ -39,8 +45,43 @@ studentForm.addEventListener("submit", function (event) {
 
     //유효한 데이터 출력하기
     console.log(studentData);
-
+    //서버로 Student 등록 요청하기
+    createStudent(studentData);
 }); //submit 이벤트
+//Student 등록 함수
+function createStudent(studentData) {
+    fetch(`${API_BASE_URL}/api/students`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(studentData)  //Object => json
+    })
+        .then(async (response) => {
+            if (!response.ok) {
+                //응답 본문을 읽어서 에러 메시지 추출
+                const errorData = await response.json();
+                //status code와 message를 확인하기
+                if (response.status === 409) {
+                    //중복 오류 처리
+                    throw new Error(errorData.message || '중복 되는 정보가 있습니다.');
+                } else {
+                    //기타 오류 처리
+                    throw new Error(errorData.message || '학생 등록에 실패했습니다.')
+                }
+            }
+            return response.json();
+        })
+        .then((result) => {
+            alert("학생이 성공적으로 등록되었습니다!");
+            //입력 Form의 input의 값 초기화
+            studentForm.reset();
+            //목록 새로 고침
+            loadStudents();
+        })
+        .catch((error) => {
+            console.log('Error : ', error);
+            alert(error.message);
+        });
+}//createStudent
 
 //입력항목의 값의 유효성을 체크하는 함수
 function validateStudent(student) {// 필수 필드 검사
@@ -60,33 +101,36 @@ function validateStudent(student) {// 필수 필드 검사
         alert("학번은 영문(S)과 숫자(5자리)만 입력 가능합니다.");
         return false;
     }
+    //detailRequest
+    if (student.detailRequest) {
+        const studentDetail = student.detailRequest;
+        if (!studentDetail.address) {
+            alert("주소를 입력해주세요.");
+            return false;
+        }
 
-    if (!student.address) {
-        alert("주소를 입력해주세요.");
-        return false;
-    }
+        if (!studentDetail.phoneNumber) {
+            alert("전화번호를 입력해주세요.");
+            return false;
+        }
 
-    if (!student.phoneNumber) {
-        alert("전화번호를 입력해주세요.");
-        return false;
-    }
+        if (!studentDetail.email) {
+            alert("이메일을 입력해주세요.");
+            return false;
+        }
 
-    if (!student.email) {
-        alert("이메일을 입력해주세요.");
-        return false;
-    }
+        // 전화번호 형식 검사
+        const phonePattern = /^[0-9-\s]+$/;
+        if (!phonePattern.test(studentDetail.phoneNumber)) {
+            alert("올바른 전화번호 형식이 아닙니다.");
+            return false;
+        }
 
-    // 전화번호 형식 검사
-    const phonePattern = /^[0-9-\s]+$/;
-    if (!phonePattern.test(student.phoneNumber)) {
-        alert("올바른 전화번호 형식이 아닙니다.");
-        return false;
-    }
-
-    // 이메일 형식 검사 (입력된 경우에만)
-    if (student.email && !isValidEmail(student.email)) {
-        alert("올바른 이메일 형식이 아닙니다.");
-        return false;
+        // 이메일 형식 검사 (입력된 경우에만)
+        if (student.email && !isValidEmail(studentDetail.email)) {
+            alert("올바른 이메일 형식이 아닙니다.");
+            return false;
+        }
     }
 
     return true;
@@ -103,9 +147,9 @@ function loadStudents() {
     console.log("학생 목록 Load 중.....");
     fetch(`${API_BASE_URL}/api/students`) //Promise
         .then((response) => {
-            if (!response.ok) {
-                throw new Error("학생 목록을 불러오는데 실패했습니다!.");
-            }
+            // if (!response.ok) {
+            //     throw new Error("학생 목록을 불러오는데 실패했습니다!.");
+            // }
             return response.json();
         })
         .then((students) => renderStudentTable(students))
@@ -122,15 +166,15 @@ function renderStudentTable(students) {
     students.forEach((student) => {
         //<tr> 엘리먼트를 생성하기
         const row = document.createElement("tr");
-        
+
         //<tr>의 content을 동적으로 생성
         row.innerHTML = `
                     <td>${student.name}</td>
                     <td>${student.studentNumber}</td>
-                    <td>${student.detail ?.address?? "-"}</td>
-                    <td>${student.detail ?.phoneNumber?? "-"}</td>
-                    <td>${student.detail?.email?? "-"}</td>
-                    <td>${student.detail ?.dateOfBirth?? "-"}</td>
+                    <td>${student.detail?.address ?? "-"}</td>
+                    <td>${student.detail?.phoneNumber ?? "-"}</td>
+                    <td>${student.detail?.email ?? "-"}</td>
+                    <td>${student.detail?.dateOfBirth ?? "-"}</td>
                     <td>
                         <button class="edit-btn" onclick="editStudent(${student.id})">수정</button>
                         <button class="delete-btn" onclick="deleteStudent(${student.id})">삭제</button>
@@ -138,6 +182,8 @@ function renderStudentTable(students) {
                 `;
         //<tbody>의 아래에 <tr>을 추가시켜 준다.
         studentTableBody.appendChild(row);
-    });    
+    });
+
+
 
 }//renderStudentTable
