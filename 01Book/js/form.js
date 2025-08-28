@@ -1,31 +1,27 @@
-//전역변수
+// 전역 변수
 const API_BASE_URL = "http://localhost:8080";
-//현재 Update 중인 학생의 ID
+// 현재 Update 중인 도서의 ID
 var editingBookId = null;
+// 원본 도서 데이터 (수정 전)
+var originalBookData = null;
 
-//DOM 엘리먼트 가져오기
+// DOM 엘리먼트 가져오기
 const bookForm = document.getElementById("bookForm");
 const bookTableBody = document.getElementById("bookTableBody");
 const submitButton = document.querySelector("button[type='submit']");
 const cancelButton = document.querySelector(".cancel-btn");
 const formErrorSpan = document.getElementById("formError");
 
-//Document Load 이벤트 처리하기
+// Document Load 이벤트 처리
 document.addEventListener("DOMContentLoaded", function () {
-    resetForm();
     loadBooks();
 });
-//bookForm 의 Submit 이벤트 처리하기
+
+// bookForm의 Submit 이벤트 처리
 bookForm.addEventListener("submit", function (event) {
-    //기본으로 설정된 Event가 동작하지 않도록 하기 위함
     event.preventDefault();
-    console.log("Form 이 체출 되었음....")
 
-    //FormData 객체생성 <form>엘리먼트를 객체로 변환
     const bkFormData = new FormData(bookForm);
-
-
-    //사용자 정의 book Object Literal 객체생성 (공백 제거 trim())
     const bookData = {
         title: bkFormData.get("title").trim(),
         author: bkFormData.get("author").trim(),
@@ -33,7 +29,6 @@ bookForm.addEventListener("submit", function (event) {
         price: bkFormData.get("price").trim(),
         publishDate: bkFormData.get("publishDate").trim(),
         detailRequest: {
-
             description: bkFormData.get("description").trim(),
             language: bkFormData.get("language").trim(),
             pageCount: bkFormData.get("pageCount").trim(),
@@ -41,112 +36,153 @@ bookForm.addEventListener("submit", function (event) {
             coverImageUrl: bkFormData.get("coverImageUrl").trim(),
             edition: bkFormData.get("edition").trim(),
         }
+    };
 
-    }
+    if (!validateBook(bookData)) return;
 
-    //유효성 체크하는 함수 호출하기
-    if (!validateBook(bookData)) {
-        //검증체크 실패하면 리턴하기
-        return;
-    }
-
-    //유효한 데이터 출력하기
-    console.log(bookData);
-
-    //현재 수정중인 학생Id가 있으면 수정처리
+    // 수정 중인지 확인
     if (editingBookId) {
-        //서버로 Book 수정 요청하기
-        updateBook(editingBookId, bookData);
+        updateBook(editingBookId, bookData, originalBookData);
     } else {
-        //서버로 Book 등록 요청하기
         createBook(bookData);
     }
-}); //submit 이벤트
-//book등록 함수
+});
+
+// ------------------------------
+// 도서 등록
+// ------------------------------
 function createBook(bookData) {
     fetch(`${API_BASE_URL}/api/books`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookData)  //Object => json
+        body: JSON.stringify(bookData)
     })
-        .then(async (response) => {
+        .then(async response => {
             if (!response.ok) {
-                //응답 본문을 읽어서 에러 메시지 추출
                 const errorData = await response.json();
-                //status code와 message를 확인하기
-                if (response.status === 409) {
-                    //중복 오류 처리
-                    throw new Error(errorData.message || '중복 되는 정보가 있습니다.');
-                } else {
-                    //기타 오류 처리
-                    throw new Error(errorData.message || '도서 등록에 실패했습니다.')
-                }
+                throw new Error(errorData.message || '도서 등록에 실패했습니다.');
             }
             return response.json();
         })
-        .then((result) => {
+        .then(result => {
             resetForm();
-            showSuccess("도서가 성공적으로 등록되었습니다!");
-            //입력 Form의 input의 값 초기화
-
-            //목록 새로 고침
+            showMessage("도서가 성공적으로 등록되었습니다!", "success");
             loadBooks();
         })
-        .catch((error) => {
-            console.log('Error : ', error);
-            showError(error.message);
-        });
-}//createBook
+        .catch(error => showMessage(error.message, "error"));
+}
 
-//Book 삭제 함수
-function deleteBook(bookId, bookTitle) {
-    if (!confirm(`제목 = ${bookTitle} 도서를 정말로 삭제하시겠습니까?`)) {
+// ------------------------------
+// 도서 수정
+// ------------------------------
+function updateBook(bookId, bookData, originalData) {
+    submitButton.disabled = true;
+    submitButton.textContent = "수정 중...";
+
+    // 변경 감지
+    const payload = getPatchPayload(originalData, bookData);
+    if (Object.keys(payload).length === 0) {
+        showMessage("변경된 내용이 없습니다.", "error");
+        submitButton.disabled = false;
+        submitButton.textContent = "도서 수정";
         return;
     }
-    console.log('삭제처리 ...');
-    fetch(`${API_BASE_URL}/api/books/${bookId}`, {
-        method: 'DELETE'
-    })
-        .then(async (response) => {
-            if (!response.ok) {
-                //응답 본문을 읽어서 에러 메시지 추출
-                const errorData = await response.json();
-                //status code와 message를 확인하기
-                if (response.status === 404) {
-                    //중복 오류 처리
-                    throw new Error(errorData.message || '존재하지 않는 학생입니다다.');
-                } else {
-                    //기타 오류 처리
-                    throw new Error(errorData.message || '학생 삭제에 실패했습니다.')
-                }
-            }
-            showSuccess("학생이 성공적으로 삭제되었습니다!");
-            //목록 새로 고침
-            loadBooks();
-        })
-        .catch((error) => {
-            console.log('Error : ', error);
-            show(error.message);
-        });
-}//deleteBook
 
-//도서 수정전에 데이터를 로드하는 함수
-function editBook(bookId) {
-    fetch(`${API_BASE_URL}/api/books/${bookId}`)
-        .then(async (response) => {
+    // PATCH/PUT 결정
+    const method = payload.detailRequest || Object.keys(payload).length < Object.keys(bookData).length ? "PATCH" : "PUT";
+
+    fetch(`${API_BASE_URL}/api/books/${bookId}`, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+        .then(async response => {
             if (!response.ok) {
-                //응답 본문을 읽어서 에러 메시지 추출
                 const errorData = await response.json();
-                //status code와 message를 확인하기
-                if (response.status === 404) {
-                    //중복 오류 처리
-                    throw new Error(errorData.message || '존재하지 않는 도서입니다.');
-                }
+                const message = errorData.message || '도서 수정에 실패했습니다.';
+                throw new Error(response.status === 409 ? `${message} (에러코드: 409)` : message);
             }
             return response.json();
         })
-        .then((book) => {
-            //Form에 데이터 채우기
+        .then(result => {
+            showMessage("도서가 성공적으로 수정되었습니다!", "success");
+            resetForm();
+            loadBooks();
+        })
+        .catch(error => showMessage(error.message, "error"))
+        .finally(() => {
+            submitButton.disabled = false;
+            submitButton.textContent = "도서 수정";
+        });
+}
+
+// ------------------------------
+// 변경된 필드만 추려내기
+// ------------------------------
+function getPatchPayload(originalBook, currentBook) {
+    const patchPayload = {};
+
+    if (originalBook.title !== currentBook.title) patchPayload.title = currentBook.title;
+    if (originalBook.author !== currentBook.author) patchPayload.author = currentBook.author;
+    if (originalBook.isbn !== currentBook.isbn) patchPayload.isbn = currentBook.isbn;
+    if (originalBook.price != currentBook.price) patchPayload.price = currentBook.price;
+    if (originalBook.publishDate !== currentBook.publishDate) patchPayload.publishDate = currentBook.publishDate;
+
+    const detailPayload = {};
+    if (originalBook.detail?.description !== currentBook.detailRequest.description)
+        detailPayload.description = currentBook.detailRequest.description;
+    if (originalBook.detail?.language !== currentBook.detailRequest.language)
+        detailPayload.language = currentBook.detailRequest.language;
+    if (originalBook.detail?.pageCount != currentBook.detailRequest.pageCount)
+        detailPayload.pageCount = currentBook.detailRequest.pageCount;
+    if (originalBook.detail?.publisher !== currentBook.detailRequest.publisher)
+        detailPayload.publisher = currentBook.detailRequest.publisher;
+    if (originalBook.detail?.coverImageUrl !== currentBook.detailRequest.coverImageUrl)
+        detailPayload.coverImageUrl = currentBook.detailRequest.coverImageUrl;
+    if (originalBook.detail?.edition !== currentBook.detailRequest.edition)
+        detailPayload.edition = currentBook.detailRequest.edition;
+
+    if (Object.keys(detailPayload).length > 0) {
+        patchPayload.detailRequest = detailPayload;
+    }
+
+    return patchPayload;
+}
+
+// ------------------------------
+// 도서 삭제
+// ------------------------------
+function deleteBook(bookId, bookTitle) {
+    if (!confirm(`제목 = ${bookTitle} 도서를 정말로 삭제하시겠습니까?`)) return;
+
+    fetch(`${API_BASE_URL}/api/books/${bookId}`, { method: 'DELETE' })
+        .then(async response => {
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '도서 삭제에 실패했습니다.');
+            }
+            showMessage("도서가 성공적으로 삭제되었습니다!", "success");
+            loadBooks();
+        })
+        .catch(error => showMessage(error.message, "error"));
+}
+
+// ------------------------------
+// 도서 수정 전 데이터 로드
+// ------------------------------
+function editBook(bookId) {
+    fetch(`${API_BASE_URL}/api/books/${bookId}`)
+        .then(async response => {
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '존재하지 않는 도서입니다.');
+            }
+            return response.json();
+        })
+        .then(book => {
+            resetForm();
+
+            // Form에 데이터 채우기
             bookForm.title.value = book.title;
             bookForm.author.value = book.author;
             bookForm.isbn.value = book.isbn;
@@ -161,194 +197,114 @@ function editBook(bookId) {
                 bookForm.edition.value = book.detail.edition;
             }
 
-            //수정 Mode 설정
+            // 수정 Mode 설정
             editingBookId = bookId;
-            //버튼의 타이틀을 등록 => 수정으로 변경
+            originalBookData = book; // 원본 데이터 저장
             submitButton.textContent = "도서 수정";
-            //취소 버튼을 활성화
             cancelButton.style.display = 'inline-block';
         })
-        .catch((error) => {
-            console.log('Error : ', error);
-            showError(error.message);
-        });
-}//editBook
+        .catch(error => showMessage(error.message, "error"));
+}
 
-//도서수정을 처리하는 함수
-function updateBook(bookId, bookData) {
-    fetch(`${API_BASE_URL}/api/books/${bookId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookData)  //Object => json
-    })
-        .then(async (response) => {
-            if (!response.ok) {
-                //응답 본문을 읽어서 에러 메시지 추출 
-                //errorData 객체는 서버의 ErrorObject와 매핑이 된다.
-                const errorData = await response.json();
-                //status code와 message를 확인하기
-                if (response.status === 409) {
-                    //중복 오류 처리
-                    throw new Error(`${errorData.message} ( 에러코드: ${errorData.statusCode} )` || '중복 되는 정보가 있습니다.');
-                } else {
-                    //기타 오류 처리
-                    throw new Error(errorData.message || '도서 수정에 실패했습니다.')
-                }
-            }
-            return response.json();
-        })
-        .then((result) => {
-            //등록모드로 전환
-            resetForm();
-            showSuccess("도서가 성공적으로 수정되었습니다!");
-            //목록 새로 고침
-            loadBooks();
-        })
-        .catch((error) => {
-            console.log('Error : ', error);
-            showError(error.message);
-        });
-}//updateBook
-
-//입력필드 초기화,수정모드에서 등록모드로 전환
+// ------------------------------
+// Form 초기화
+// ------------------------------
 function resetForm() {
-    //form 초기화
     bookForm.reset();
-    //수정 Mode 설정하는 변수 초기화
     editingBookId = null;
-    //submit 버튼의 타이틀을 도서 등록 변경
+    originalBookData = null;
     submitButton.textContent = "도서 등록";
-    //cancel 버튼의 사라지게
     cancelButton.style.display = 'none';
-    //error message 초기화
-    clearMessages();
-}//resetForm
+    hideMessage();
+}
 
+// ------------------------------
+// 유효성 검사
+// ------------------------------
+function validateBook(book) {
+    if (!book.title) { showMessage("제목을 입력해주세요."); bookForm.title.focus(); return false; }
+    if (!book.author) { showMessage("저자를 입력해주세요."); bookForm.author.focus(); return false; }
+    if (!/^\d{13}$/.test(book.isbn)) { showMessage("ISBN은 숫자(13자리)만 입력 가능합니다."); bookForm.isbn.focus(); return false; }
+    if (!book.price) { showMessage("가격을 입력해주세요."); bookForm.price.focus(); return false; }
 
-//입력항목의 값의 유효성을 체크하는 함수
-function validateBook(book) {// 필수 필드 검사
-    if (!book.title) {
-        alert("제목을 입력해주세요.");
-        return false;
-    }
+    const bd = book.detailRequest;
+    if (!bd.description) { showMessage("Description을 입력해주세요."); bookForm.description.focus(); return false; }
+    if (!bd.language) { showMessage("Language를 입력해주세요."); bookForm.language.focus(); return false; }
+    if (!bd.pageCount) { showMessage("PageCount를 입력해주세요."); bookForm.pageCount.focus(); return false; }
+    if (!bd.publisher) { showMessage("Publisher를 입력해주세요."); bookForm.publisher.focus(); return false; }
+    if (!bd.coverImageUrl) { showMessage("CoverImageUrl을 입력해주세요."); bookForm.coverImageUrl.focus(); return false; }
+    if (!bd.edition) { showMessage("Edition을 입력해주세요."); bookForm.edition.focus(); return false; }
 
-    if (!book.author) {
-        alert("저자를 입력해주세요.");
-        return false;
-    }
-    // ISBN 형식 검사 (예: 영문과 숫자 조합)
-
-    const bookIsbnPattern = /^\d{13}$/;
-    if (!bookIsbnPattern.test(book.isbn)) {
-        alert("ISBN은 숫자(13자리)만 입력 가능합니다.");
-        return false;
-    }
-
-    if (!book.price) {
-        alert("가격을 입력해주세요.");
-        return false;
-    }
-    if (book.detailRequest) {
-        const bookDetail = book.detailRequest;
-        if (!bookDetail.description) {
-            alert("Description을 입력해주세요.");
-            return false;
-        }
-        if (!bookDetail.language) {
-            alert("language를 입력해주세요.");
-            return false;
-        }
-        if (!bookDetail.pageCount) {
-            alert("pageCount를 입력해주세요.");
-            return false;
-        }
-        if (!bookDetail.publisher) {
-            alert("publisher를 입력해주세요.");
-            return false;
-        }
-        if (!bookDetail.coverImageUrl) {
-            alert("coverImageUrl을 입력해주세요.");
-            return false;
-        }
-        if (!bookDetail.edition) {
-            alert("edition을 입력해주세요.");
-            return false;
-        }
-
-    }
     return true;
 }
 
-//book 목록을 Load 하는 함수
+// ------------------------------
+// 도서 목록 로드
+// ------------------------------
 function loadBooks() {
-    console.log("도서 목록 Load 중.....");
-    fetch(`${API_BASE_URL}/api/books`) //Promise
-        .then(async (response) => {
+    fetch(`${API_BASE_URL}/api/books`)
+        .then(async response => {
             if (!response.ok) {
-                //응답 본문을 읽어서 에러 메시지 추출
                 const errorData = await response.json();
-                throw new Error(`${errorData.message}`);
+                throw new Error(errorData.message);
             }
             return response.json();
         })
-        .then((books) => renderBookTable(books))
-        .catch((error) => {
-            console.log(error);
-            showError(error.message);
-           bookTableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align: center; color: #dc3545;">
-                        오류: 데이터를 불러올 수 없습니다.
-                    </td>
-                </tr>
-            `;
+        .then(books => renderBookTable(books))
+        .catch(error => {
+            showMessage(error.message, "error");
+            bookTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc3545;">오류: 데이터를 불러올 수 없습니다.</td></tr>`;
         });
-};
+}
 
+// ------------------------------
+// 도서 테이블 렌더링
+// ------------------------------
 function renderBookTable(books) {
-    console.log(books);
     bookTableBody.innerHTML = "";
-
-    books.forEach((book) => {
-        //<tr> 엘리먼트를 생성하기
+    books.forEach(book => {
         const row = document.createElement("tr");
-
-        //<tr>의 content을 동적으로 생성
         row.innerHTML = `
-                    <td>${book.title}</td>
-                    <td>${book.author}</td>
-                    <td>${book.isbn}</td>
-                    <td>${book.price}</td>
-                    <td>${book.publishDate}</td>
-                    <td>${book.detail?.description ?? "-"}</td>
-                    <td>${book.detail?.language ?? "-"}</td>
-                    <td>${book.detail?.pageCount ?? "-"}</td>
-                    <td>${book.detail?.publisher ?? "-"}</td>
-                    <td>${book.detail?.coverImageUrl ?? "-"}</td>
-                    <td>${book.detail?.edition ?? "-"}</td>
-                    <td>
-                        <button class="edit-btn" onclick="editBook(${book.id})">수정</button>
-                        <button class="delete-btn" onclick="deleteBook(${book.id},'${book.title}')">삭제</button>
-                    </td>
-                `;
-        //<tbody>의 아래에 <tr>을 추가시켜 준다.
+            <td>${book.title}</td>
+            <td>${book.author}</td>
+            <td>${book.isbn}</td>
+            <td>${book.price}</td>
+            <td>${book.publishDate}</td>
+            <td>${book.detail?.description ?? "-"}</td>
+            <td>${book.detail?.language ?? "-"}</td>
+            <td>${book.detail?.pageCount ?? "-"}</td>
+            <td>${book.detail?.publisher ?? "-"}</td>
+            <td>${book.detail?.coverImageUrl ?? "-"}</td>
+            <td>${book.detail?.edition ?? "-"}</td>
+            <td>
+                <button class="edit-btn" onclick="editBook(${book.id})">수정</button>
+                <button class="delete-btn" onclick="deleteBook(${book.id},'${book.title}')">삭제</button>
+            </td>
+        `;
         bookTableBody.appendChild(row);
     });
+}
 
-}//renderBookTable
-//성공 메시지 출력
-function showSuccess(message) {
+// ------------------------------
+// 메시지 표시
+// ------------------------------
+function showMessage(message, type) {
     formErrorSpan.textContent = message;
     formErrorSpan.style.display = 'block';
-    formErrorSpan.style.color = '#28a745';
+    if (type === "success") {
+        formErrorSpan.style.color = '#28a745';
+        formErrorSpan.style.backgroundColor = '#d4edda';
+        formErrorSpan.style.borderColor = '#c3e6cb';
+    } else {
+        formErrorSpan.style.color = '#dc3545';
+        formErrorSpan.style.backgroundColor = '#f8d7da';
+        formErrorSpan.style.borderColor = '#f5c6cb';
+    }
+    setTimeout(hideMessage, 3000);
 }
-//에러 메시지 출력
-function showError(message) {
-    formErrorSpan.textContent = message;
-    formErrorSpan.style.display = 'block';
-    formErrorSpan.style.color = '#dc3545';
-}
-//메시지 초기화
-function clearMessages() {
+
+function hideMessage() {
     formErrorSpan.style.display = 'none';
+    formErrorSpan.style.backgroundColor = '';
+    formErrorSpan.style.borderColor = '';
 }
