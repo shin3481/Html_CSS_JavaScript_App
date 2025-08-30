@@ -1,24 +1,196 @@
-﻿body {
-    font-family: "맑은 고딕", "돋움", "굴림";               
-    /*
-    background: bg-color bg-image position/bg-size bg-repeat bg-origin bg-clip bg-attachment
-       bg-images : url('../images/bg.jpg') 
-       bg-repeat : no-repeat : 
-       bg-position (배경 위치) : left(가로위치-왼쪽) top(세로위치-상단) : 
-       bg-attachment (배경 고정) : fixed 페이지를 스크롤해도 배경은 움직이지 않음
-    */
-    
-    /*
-    background-size
-    : cover
-        비율 유지하며 요소 전체를 덮음
-        이미지 일부가 잘릴 수 있음
-        풀스크린 배경에 최적
-    : contain
-        비율 유지하며 요소 안에 완전 포함
-        여백이 생길 수 있음
-        로고, 아이콘에 최적
-    */
-    
+﻿/* 공통 스타일 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* backgroud */
+    background-image: url('../images/bg.jpg');
+    /* background-size */
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#wrapper {
+    width: 960px;
+    background-color: rgba(255, 255, 255, 0);
+    /* 배경 반투명 */
+    overflow: hidden;
+    /* margin */
+    margin: 20px;
+
+}
+
+header {
+    background-color: transparent;
+    color: #000000;
+    text-align: left;
+    padding: 20px;
+    border-bottom: 2px solid #555;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+section {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border: 3px solid #000;
+}
+
+nav {
+    width: 100%;
+    background-color: #333;
+    color: #fff;
+    padding: 0;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    width: 100%;
+}
+
+nav ul li {
+    background-color: #252525;
+    flex: 1;
+    /* 각 탭이 동일한 너비를 가짐 */
+}
+
+nav a {
+    display: block;
+    padding: 15px 20px;
+    background-color: #252525;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 0;
+    transition: background-color 0.3s;
+    text-align: center;
+}
+
+nav a:hover {
+    background-color: #444;
+    font-weight: bold;
+}
+
+nav a.current {
+    background-color: #ffffff;
+    /* 현재 페이지 배경색을 흰색으로 변경 */
+    color: #000000;
+    /* 현재 페이지 텍스트 색상을 검은색으로 변경 */
+    border-top-left-radius: 10px;
+    /* 왼쪽 위 모서리 라운드 */
+    border-top-right-radius: 10px;
+    /* 오른쪽 위 모서리 라운드 */
+    width: 190px; /* 너비를 4등분 */
+    margin: 0 auto; /* 가운데 정렬 */
+}
+
+article {
+    flex-grow: 1;
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+h2 {
+    color: #000000;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    /* images\icon.png 사용 */
+    background-image: url('../images/icon.png');
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 50px;
+    padding-left: 50px;
+}
+
+/* 이미지 스타일 (원본 이미지와 동일하게) */
+article img {
+    float: right;
+    margin-left: 20px;
+    max-width: 300px;
+    height: auto;
+    object-fit: cover;
+    border: 1px solid #111111;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
+    /* 그림자 조정 */
+    transform: rotate(-10deg);
+}
+
+article p {
+    margin-bottom: 15px;
+}
+
+article ol {
+    margin-left: 20px;
+    list-style-type: decimal;
+    padding-left: 15px;
+}
+
+article li {
+    margin-bottom: 5px;
+}
+
+article ol li ul {
+    margin-top: 20px;
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+
+footer {
+    background-color: #6e6e6e;
+    color: #fff;
+    text-align: center;
+    font-size: 0.8em;
+    padding: 10px 20px;
+    border: 3px solid #000;
+
+}
+
+footer p,
+footer address {
+    margin: 5px 0;
+}
+
+/* table 스타일 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    /* 테이블 셀 간의 여백 제거 */
+    margin: 20px 0;
+    max-width: 500px;
+    margin: 20px auto;
+    border: 1px solid #000;
+
+}
+
+caption {
+    font-weight: bold;
+    padding: 10px;
+    caption-side: top;
+    text-align: center;
+}
+
+table th,
+table td {
+    padding: 12px 15px;
+    border: 1px solid #000000;
+    text-align: left;
+}
+
+table th {
+    background-color: #dddada;
+    color: #333;
+    text-align: center;
+}
